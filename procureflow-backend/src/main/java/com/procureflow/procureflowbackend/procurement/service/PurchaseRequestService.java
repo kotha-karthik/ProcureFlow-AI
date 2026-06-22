@@ -178,4 +178,33 @@ public class PurchaseRequestService {
                         purchaseRequest.getTotalEstimatedAmount())
                 .build();
     }
+
+    public PurchaseRequestResponse approvePurchaseRequest(UUID requestId) {
+
+        PurchaseRequest purchaseRequest =
+                purchaseRequestRepository
+                        .findByRequestIdAndIsDeletedFalse(requestId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Purchase Request not found"));
+
+        if (!"SUBMITTED".equals(purchaseRequest.getRequestStatus())) {
+            throw new RuntimeException(
+                    "Only SUBMITTED requests can be approved");
+        }
+
+        purchaseRequest.setRequestStatus("APPROVED");
+        purchaseRequest.setCompletedAt(LocalDateTime.now());
+
+        purchaseRequestRepository.save(purchaseRequest);
+
+        return PurchaseRequestResponse.builder()
+                .requestId(purchaseRequest.getRequestId())
+                .requestNumber(purchaseRequest.getRequestNumber())
+                .title(purchaseRequest.getTitle())
+                .requestStatus(purchaseRequest.getRequestStatus())
+                .totalEstimatedAmount(
+                        purchaseRequest.getTotalEstimatedAmount())
+                .build();
+    }
 }

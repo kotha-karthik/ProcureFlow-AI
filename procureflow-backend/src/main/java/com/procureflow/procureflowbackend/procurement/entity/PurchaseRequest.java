@@ -67,4 +67,7 @@ public class PurchaseRequest {
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 }

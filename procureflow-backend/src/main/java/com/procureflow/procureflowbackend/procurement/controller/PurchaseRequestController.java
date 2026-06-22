@@ -49,4 +49,14 @@ public class PurchaseRequestController {
         return purchaseRequestService
                 .submitPurchaseRequest(id);
     }
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAuthority('PR_APPROVE')")
+    public PurchaseRequestResponse approvePurchaseRequest(
+            @PathVariable UUID id
+    ) {
+
+        return purchaseRequestService
+                .approvePurchaseRequest(id);
+    }
 }
