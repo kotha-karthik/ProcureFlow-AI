@@ -46,4 +46,21 @@ public class RfqController {
 
         return rfqService.sendRfq(id);
     }
+
+    @PostMapping("/{rfqId}/award/{quotationId}")
+    public String awardRfq(
+            @PathVariable UUID rfqId,
+            @PathVariable UUID quotationId,
+            Authentication authentication
+    ) {
+
+        CustomUserDetails user =
+                (CustomUserDetails)
+                        authentication.getPrincipal();
+
+        return rfqService.awardRfq(
+                rfqId,
+                quotationId,
+                user);
+    }
 }

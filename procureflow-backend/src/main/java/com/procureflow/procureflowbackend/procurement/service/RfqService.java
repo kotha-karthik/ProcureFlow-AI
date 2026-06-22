@@ -2,10 +2,7 @@ package com.procureflow.procureflowbackend.procurement.service;
 
 import com.procureflow.procureflowbackend.procurement.dto.CreateRfqRequest;
 import com.procureflow.procureflowbackend.procurement.dto.RfqResponse;
-import com.procureflow.procureflowbackend.procurement.entity.PurchaseRequest;
-import com.procureflow.procureflowbackend.procurement.entity.Rfq;
-import com.procureflow.procureflowbackend.procurement.entity.RfqItem;
-import com.procureflow.procureflowbackend.procurement.entity.RfqVendor;
+import com.procureflow.procureflowbackend.procurement.entity.*;
 import com.procureflow.procureflowbackend.procurement.repository.*;
 import com.procureflow.procureflowbackend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +23,10 @@ public class RfqService {
     private final RfqVendorRepository rfqVendorRepository;
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final RequestItemRepository requestItemRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
+    private final PurchaseOrderItemRepository purchaseOrderItemRepository;
+    private final VendorQuotationRepository quotationRepository;
+    private final QuotationItemRepository quotationItemRepository;
 
     public RfqResponse createRfq(CreateRfqRequest request, CustomUserDetails user)
     {
@@ -167,5 +168,88 @@ public class RfqService {
                 .issueDate(rfq.getIssueDate())
                 .closingDate(rfq.getClosingDate())
                 .build();
+    }
+
+    public String awardRfq(UUID rfqId, UUID quotationId, CustomUserDetails user)
+    {
+        Rfq rfq = rfqRepository.findById(rfqId)
+                .orElseThrow(() ->
+                        new RuntimeException("RFQ not found"));
+
+        if (!"PUBLISHED".equals(rfq.getStatus())) {
+
+            throw new RuntimeException(
+                    "Only PUBLISHED RFQs can be awarded");
+        }
+
+        VendorQuotation quotation =
+                quotationRepository.findById(quotationId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Quotation not found"));
+
+        // Update RFQ Status
+        rfq.setStatus("AWARDED");
+        rfqRepository.save(rfq);
+
+        // Create Purchase Order
+
+        UUID poId = UUID.randomUUID();
+
+        PurchaseOrder po =
+                PurchaseOrder.builder()
+                        .purchaseOrderId(poId)
+                        .organizationId(
+                                user.getOrganizationId())
+                        .poNumber(
+                                "PO-" + System.currentTimeMillis())
+                        .quotationId(
+                                quotation.getQuotationId())
+                        .vendorId(
+                                quotation.getVendorId())
+                        .purchaseRequestId(
+                                rfq.getPurchaseRequestId())
+                        .totalAmount(
+                                quotation.getTotalAmount())
+                        .currencyCode(
+                                quotation.getCurrencyCode())
+                        .issueDate(LocalDate.now())
+                        .expectedDeliveryDate(
+                                LocalDate.now()
+                                        .plusDays(
+                                                quotation.getDeliveryDays()))
+                        .status("CREATED")
+                        .createdBy(user.getUserId())
+                        .createdAt(LocalDateTime.now())
+                        .remarks("Auto-generated from RFQ")
+                        .build();
+
+        purchaseOrderRepository.save(po);
+
+        // Copy quotation items to PO items
+
+        quotationItemRepository
+                .findByQuotationId(quotationId)
+                .forEach(item -> {
+
+                    PurchaseOrderItem poItem =
+                            PurchaseOrderItem.builder()
+                                    .purchaseOrderItemId(
+                                            UUID.randomUUID())
+                                    .purchaseOrderId(poId)
+                                    .quotationItemId(
+                                            item.getQuotationItemId())
+                                    .itemDescription(
+                                            item.getRemarks())
+                                    .quantity(item.getQuantity())
+                                    .unitPrice(item.getUnitPrice())
+                                    .totalPrice(item.getTotalPrice())
+                                    .createdAt(LocalDateTime.now())
+                                    .build();
+
+                    purchaseOrderItemRepository.save(poItem);
+                });
+
+        return "RFQ Awarded Successfully. Purchase Order Generated.";
     }
 }
