@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -94,5 +95,20 @@ public class PurchaseRequestService {
                 .requestStatus("DRAFT")
                 .totalEstimatedAmount(totalAmount)
                 .build();
+    }
+
+    public List<PurchaseRequestResponse> getAllPurchaseRequests() {
+
+        return purchaseRequestRepository
+                .findByIsDeletedFalse()
+                .stream()
+                .map(pr -> PurchaseRequestResponse.builder()
+                        .requestId(pr.getRequestId())
+                        .requestNumber(pr.getRequestNumber())
+                        .title(pr.getTitle())
+                        .requestStatus(pr.getRequestStatus())
+                        .totalEstimatedAmount(pr.getTotalEstimatedAmount())
+                        .build())
+                .toList();
     }
 }
