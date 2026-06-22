@@ -2,6 +2,7 @@ package com.procureflow.procureflowbackend.procurement.controller;
 
 import com.procureflow.procureflowbackend.procurement.dto.CreatePurchaseRequestRequest;
 import com.procureflow.procureflowbackend.procurement.dto.PurchaseRequestResponse;
+import com.procureflow.procureflowbackend.procurement.dto.StatusHistoryResponse;
 import com.procureflow.procureflowbackend.procurement.service.PurchaseRequestService;
 import com.procureflow.procureflowbackend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -45,18 +46,30 @@ public class PurchaseRequestController {
 
     @PostMapping("/{id}/submit")
     @PreAuthorize("hasAuthority('PR_SUBMIT')")
-    public PurchaseRequestResponse submitPurchaseRequest(@PathVariable UUID id) {
+    public PurchaseRequestResponse submitPurchaseRequest(@PathVariable UUID id, Authentication authentication) {
+        CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
+
         return purchaseRequestService
-                .submitPurchaseRequest(id);
+                .submitPurchaseRequest(id, user);
     }
 
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasAuthority('PR_APPROVE')")
-    public PurchaseRequestResponse approvePurchaseRequest(
-            @PathVariable UUID id
-    ) {
+    public PurchaseRequestResponse approvePurchaseRequest(@PathVariable UUID id,Authentication authentication)
+    {
+        CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
 
         return purchaseRequestService
-                .approvePurchaseRequest(id);
+                .approvePurchaseRequest(id,user);
+    }
+
+
+    @GetMapping("/{id}/history")
+    @PreAuthorize("hasAuthority('PR_VIEW')")
+    public List<StatusHistoryResponse> getHistory(@PathVariable UUID id)
+    {
+
+        return purchaseRequestService
+                .getStatusHistory(id);
     }
 }

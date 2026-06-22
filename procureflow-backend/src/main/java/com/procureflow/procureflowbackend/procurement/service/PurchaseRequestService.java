@@ -1,14 +1,13 @@
 package com.procureflow.procureflowbackend.procurement.service;
 
 
-import com.procureflow.procureflowbackend.procurement.dto.CreatePurchaseRequestRequest;
-import com.procureflow.procureflowbackend.procurement.dto.PurchaseRequestResponse;
-import com.procureflow.procureflowbackend.procurement.dto.RequestItemRequest;
-import com.procureflow.procureflowbackend.procurement.dto.RequestItemResponse;
+import com.procureflow.procureflowbackend.procurement.dto.*;
 import com.procureflow.procureflowbackend.procurement.entity.PurchaseRequest;
 import com.procureflow.procureflowbackend.procurement.entity.RequestItem;
+import com.procureflow.procureflowbackend.procurement.entity.RequestStatusHistory;
 import com.procureflow.procureflowbackend.procurement.repository.PurchaseRequestRepository;
 import com.procureflow.procureflowbackend.procurement.repository.RequestItemRepository;
+import com.procureflow.procureflowbackend.procurement.repository.RequestStatusHistoryRepository;
 import com.procureflow.procureflowbackend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,6 +24,7 @@ import java.util.UUID;
 public class PurchaseRequestService {
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final RequestItemRepository requestItemRepository;
+    private final RequestStatusHistoryRepository historyRepository;
 
     public PurchaseRequestResponse createPurchaseRequest(
             CreatePurchaseRequestRequest request,
@@ -66,6 +66,7 @@ public class PurchaseRequestService {
                         .build();
 
         purchaseRequestRepository.save(purchaseRequest);
+        saveStatusHistory(requestId, null, "DRAFT", user.getUserId(), "Purchase Request Created");
 
         for (RequestItemRequest item : request.getItems()) {
 
@@ -150,7 +151,7 @@ public class PurchaseRequestService {
                 .build();
     }
 
-    public PurchaseRequestResponse submitPurchaseRequest(UUID requestId) {
+    public PurchaseRequestResponse submitPurchaseRequest(UUID requestId,CustomUserDetails user) {
 
         PurchaseRequest purchaseRequest =
                 purchaseRequestRepository
@@ -165,6 +166,7 @@ public class PurchaseRequestService {
         }
 
         purchaseRequest.setRequestStatus("SUBMITTED");
+        saveStatusHistory(requestId, "DRAFT", "SUBMITTED", user.getUserId(), "Purchase Request Submitted");
         purchaseRequest.setSubmittedAt(LocalDateTime.now());
 
         purchaseRequestRepository.save(purchaseRequest);
@@ -179,7 +181,7 @@ public class PurchaseRequestService {
                 .build();
     }
 
-    public PurchaseRequestResponse approvePurchaseRequest(UUID requestId) {
+    public PurchaseRequestResponse approvePurchaseRequest(UUID requestId,CustomUserDetails user) {
 
         PurchaseRequest purchaseRequest =
                 purchaseRequestRepository
@@ -194,6 +196,7 @@ public class PurchaseRequestService {
         }
 
         purchaseRequest.setRequestStatus("APPROVED");
+        saveStatusHistory(requestId, "SUBMITTED", "APPROVED", user.getUserId(), "Purchase Request Approved");
         purchaseRequest.setCompletedAt(LocalDateTime.now());
 
         purchaseRequestRepository.save(purchaseRequest);
@@ -206,5 +209,37 @@ public class PurchaseRequestService {
                 .totalEstimatedAmount(
                         purchaseRequest.getTotalEstimatedAmount())
                 .build();
+    }
+
+    private  void saveStatusHistory(UUID requestId, String oldStatus, String newStatus, UUID changedBy, String remarks)
+    {
+        RequestStatusHistory history =
+                RequestStatusHistory.builder()
+                        .historyId(UUID.randomUUID())
+                        .requestId(requestId)
+                        .oldStatus(oldStatus)
+                        .newStatus(newStatus)
+                        .changedBy(changedBy)
+                        .changedAt(LocalDateTime.now())
+                        .remarks(remarks)
+                        .build();
+
+        historyRepository.save(history);
+    }
+
+    public List<StatusHistoryResponse> getStatusHistory(UUID requestId) {
+
+        return historyRepository
+                .findByRequestIdOrderByChangedAtAsc(requestId)
+                .stream()
+                .map(history ->
+                        StatusHistoryResponse.builder()
+                                .oldStatus(history.getOldStatus())
+                                .newStatus(history.getNewStatus())
+                                .changedBy(history.getChangedBy())
+                                .changedAt(history.getChangedAt())
+                                .remarks(history.getRemarks())
+                                .build())
+                .toList();
     }
 }
