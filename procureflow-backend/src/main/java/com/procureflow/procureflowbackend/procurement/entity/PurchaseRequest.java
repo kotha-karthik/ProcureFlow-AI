@@ -64,4 +64,7 @@ public class PurchaseRequest {
 
     @Column(name = "is_deleted")
     private Boolean isDeleted;
+
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
 }

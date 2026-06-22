@@ -4,6 +4,7 @@ package com.procureflow.procureflowbackend.procurement.service;
 import com.procureflow.procureflowbackend.procurement.dto.CreatePurchaseRequestRequest;
 import com.procureflow.procureflowbackend.procurement.dto.PurchaseRequestResponse;
 import com.procureflow.procureflowbackend.procurement.dto.RequestItemRequest;
+import com.procureflow.procureflowbackend.procurement.dto.RequestItemResponse;
 import com.procureflow.procureflowbackend.procurement.entity.PurchaseRequest;
 import com.procureflow.procureflowbackend.procurement.entity.RequestItem;
 import com.procureflow.procureflowbackend.procurement.repository.PurchaseRequestRepository;
@@ -110,5 +111,71 @@ public class PurchaseRequestService {
                         .totalEstimatedAmount(pr.getTotalEstimatedAmount())
                         .build())
                 .toList();
+    }
+
+    public PurchaseRequestResponse getPurchaseRequestById(UUID requestId) {
+
+        PurchaseRequest purchaseRequest = purchaseRequestRepository
+                .findById(requestId)
+                .orElseThrow(() ->
+                        new RuntimeException("Purchase Request not found"));
+
+        List<RequestItemResponse> itemResponses =
+                requestItemRepository.findByRequestId(requestId)
+                        .stream()
+                        .map(item -> RequestItemResponse.builder()
+                                .itemName(item.getItemName())
+                                .itemDescription(item.getItemDescription())
+                                .quantity(item.getQuantity())
+                                .unitOfMeasure(item.getUnitOfMeasure())
+                                .estimatedUnitPrice(item.getEstimatedUnitPrice())
+                                .estimatedTotalPrice(item.getEstimatedTotalPrice())
+                                .category(item.getCategory())
+                                .build())
+                        .toList();
+
+        return PurchaseRequestResponse.builder()
+                .requestId(purchaseRequest.getRequestId())
+                .requestNumber(purchaseRequest.getRequestNumber())
+                .title(purchaseRequest.getTitle())
+                .businessJustification(
+                        purchaseRequest.getBusinessJustification())
+                .priority(purchaseRequest.getPriority())
+                .currencyCode(purchaseRequest.getCurrencyCode())
+                .requestStatus(purchaseRequest.getRequestStatus())
+                .requiredByDate(purchaseRequest.getRequiredByDate())
+                .totalEstimatedAmount(
+                        purchaseRequest.getTotalEstimatedAmount())
+                .items(itemResponses)
+                .build();
+    }
+
+    public PurchaseRequestResponse submitPurchaseRequest(UUID requestId) {
+
+        PurchaseRequest purchaseRequest =
+                purchaseRequestRepository
+                        .findByRequestIdAndIsDeletedFalse(requestId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Purchase Request not found"));
+
+        if (!"DRAFT".equals(purchaseRequest.getRequestStatus())) {
+            throw new RuntimeException(
+                    "Only DRAFT requests can be submitted");
+        }
+
+        purchaseRequest.setRequestStatus("SUBMITTED");
+        purchaseRequest.setSubmittedAt(LocalDateTime.now());
+
+        purchaseRequestRepository.save(purchaseRequest);
+
+        return PurchaseRequestResponse.builder()
+                .requestId(purchaseRequest.getRequestId())
+                .requestNumber(purchaseRequest.getRequestNumber())
+                .title(purchaseRequest.getTitle())
+                .requestStatus(purchaseRequest.getRequestStatus())
+                .totalEstimatedAmount(
+                        purchaseRequest.getTotalEstimatedAmount())
+                .build();
     }
 }

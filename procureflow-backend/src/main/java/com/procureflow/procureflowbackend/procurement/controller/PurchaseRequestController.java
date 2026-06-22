@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/procurement/purchase-requests")
@@ -33,5 +34,19 @@ public class PurchaseRequestController {
     public List<PurchaseRequestResponse> getAllPurchaseRequests() {
 
         return purchaseRequestService.getAllPurchaseRequests();
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PR_VIEW')")
+    public PurchaseRequestResponse getPurchaseRequestById(@PathVariable UUID id)
+    {
+        return purchaseRequestService.getPurchaseRequestById(id);
+    }
+
+    @PostMapping("/{id}/submit")
+    @PreAuthorize("hasAuthority('PR_SUBMIT')")
+    public PurchaseRequestResponse submitPurchaseRequest(@PathVariable UUID id) {
+        return purchaseRequestService
+                .submitPurchaseRequest(id);
     }
 }
