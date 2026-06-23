@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface GoodsReceiptRepository extends JpaRepository<GoodsReceipt, UUID> {
 
     List<GoodsReceipt> findByOrganizationId(UUID organizationId);
+    long countByOrganizationId(UUID organizationId);
 }

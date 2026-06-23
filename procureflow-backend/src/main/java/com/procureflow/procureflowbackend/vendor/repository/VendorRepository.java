@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface VendorRepository extends JpaRepository<Vendor, UUID> {
 
     List<Vendor> findByIsDeletedFalse();
+    long countByOrganizationId(UUID organizationId);
 }

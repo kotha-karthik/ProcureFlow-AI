@@ -13,5 +13,6 @@ public interface VendorQuotationRepository extends JpaRepository<VendorQuotation
 
     List<VendorQuotation> findByRfqId(UUID rfqId);
     Optional<VendorQuotation> findById(UUID quotationId);
+    long countByVendorId(UUID vendorId);
 
 }
